@@ -1,107 +1,234 @@
 package com.mycompany.airlinebookingsystem;
 
-import java.util.*;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+import java.util.ArrayList;
+import java.util.List;
 
-public class AirlineBookingSystem {
-    static List<Flight> flights = new ArrayList<>();
-    static List<Booking> bookings = new ArrayList<>();
-    static Scanner scanner = new Scanner(System.in);
-    static String companyName = "Moon's MilkyWay";
+public class AirlineBookingSystem extends JFrame {
+    private List<Flight> flights = new ArrayList<>();
+    private List<Booking> bookings = new ArrayList<>();
+    private String companyName = "Air Deccan";
 
-    public static void main(String[] args) {
-        flights.add(new Flight(101, "New York", "London", 5, 500.0));
-        flights.add(new Flight(202, "Los Angeles", "Tokyo", 3, 700.0));
-        flights.add(new Flight(303, "Paris", "Rome", 2, 300.0));
+    // UI Components
+    private JPanel mainPanel;
+    private CardLayout cardLayout;
+    private JPanel flightsPanel, bookingPanel, viewBookingsPanel;
 
-        while (true) {
-            System.out.println("\n--- " + companyName + " ---");
-            System.out.println("1. View Flights");
-            System.out.println("2. Book a Flight");
-            System.out.println("3. View Bookings");
-            System.out.println("4. Exit");
-            System.out.print("Choose an option: ");
-            int choice = scanner.nextInt();
-            scanner.nextLine();
+    public AirlineBookingSystem() {
+        // Initialize flights
+        flights.add(new Flight(175, "London", "New York", 5, 1000.0));
+        flights.add(new Flight(727, "India", "Switzerland", 3, 5000.0));
+        flights.add(new Flight(609, "Paris", "Rome", 2, 1000.0));
 
-            switch (choice) {
-                case 1 -> viewFlights();
-                case 2 -> bookFlight();
-                case 3 -> viewBookings();
-                case 4 -> {
-                    System.out.println("Thanks for using " + companyName + ".");
-                    return;
-                }
-                default -> System.out.println("Invalid option. Try again.");
-            }
+        // Set up main window
+        setTitle(companyName + " Booking System");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(600, 500);
+        setLayout(new BorderLayout());
+
+        // Create menu panel
+        JPanel menuPanel = new JPanel(new FlowLayout());
+        JButton viewFlightsBtn = new JButton("View Flights");
+        JButton bookFlightBtn = new JButton("Book a Flight");
+        JButton viewBookingsBtn = new JButton("View Bookings");
+
+        viewFlightsBtn.addActionListener(e -> showPanel("FLIGHTS"));
+        bookFlightBtn.addActionListener(e -> showPanel("BOOKING"));
+        viewBookingsBtn.addActionListener(e -> showPanel("BOOKINGS"));
+
+        menuPanel.add(viewFlightsBtn);
+        menuPanel.add(bookFlightBtn);
+        menuPanel.add(viewBookingsBtn);
+        add(menuPanel, BorderLayout.NORTH);
+
+        // Create main panel with CardLayout
+        cardLayout = new CardLayout();
+        mainPanel = new JPanel(cardLayout);
+
+        // Create and add panels
+        flightsPanel = createFlightsPanel();
+        bookingPanel = createBookingPanel();
+        viewBookingsPanel = createViewBookingsPanel();
+
+        mainPanel.add(flightsPanel, "FLIGHTS");
+        mainPanel.add(bookingPanel, "BOOKING");
+        mainPanel.add(viewBookingsPanel, "BOOKINGS");
+
+        add(mainPanel, BorderLayout.CENTER);
+
+        // Show initial panel
+        showPanel("FLIGHTS");
+    }
+
+    private void showPanel(String panelName) {
+        cardLayout.show(mainPanel, panelName);
+        // Refresh panels when shown
+        if (panelName.equals("FLIGHTS")) {
+            mainPanel.remove(flightsPanel);
+            flightsPanel = createFlightsPanel();
+            mainPanel.add(flightsPanel, "FLIGHTS");
+        } else if (panelName.equals("BOOKINGS")) {
+            mainPanel.remove(viewBookingsPanel);
+            viewBookingsPanel = createViewBookingsPanel();
+            mainPanel.add(viewBookingsPanel, "BOOKINGS");
         }
     }
 
-    static void viewFlights() {
-        System.out.println("\nAvailable Flights:");
+    private JPanel createFlightsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        JTextArea flightsText = new JTextArea(15, 50);
+        flightsText.setEditable(false);
+
+        StringBuilder sb = new StringBuilder("Available Flights:\n");
         for (Flight flight : flights) {
-            flight.displayFlight();
+            sb.append("Flight ").append(flight.flightNumber)
+                    .append(": ").append(flight.source)
+                    .append(" to ").append(flight.destination)
+                    .append(", Seats: ").append(flight.availableSeats)
+                    .append(", Price: $").append(flight.ticketPrice)
+                    .append("\n");
         }
+
+        flightsText.setText(sb.toString());
+        panel.add(new JScrollPane(flightsText), BorderLayout.CENTER);
+        return panel;
     }
 
-    static void bookFlight() {
-        System.out.print("Enter your name: ");
-        String name = scanner.nextLine();
-        viewFlights();
-        System.out.print("Enter the flight number to book: ");
-        int flightNumber = scanner.nextInt();
-        scanner.nextLine();
+    private JPanel createBookingPanel() {
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
 
-        Flight selectedFlight = null;
-        for (Flight flight : flights) {
-            if (flight.flightNumber == flightNumber) {
-                selectedFlight = flight;
-                break;
+        // Passenger name
+        JPanel namePanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        namePanel.add(new JLabel("Passenger Name:"));
+        JTextField nameField = new JTextField(20);
+        namePanel.add(nameField);
+        panel.add(namePanel);
+
+        // Flight selection
+        JPanel flightPanel = new JPanel(new BorderLayout());
+        flightPanel.add(new JLabel("Select Flight:"), BorderLayout.NORTH);
+
+        JList<String> flightList = new JList<>(getFlightListData());
+        flightList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        flightPanel.add(new JScrollPane(flightList), BorderLayout.CENTER);
+        panel.add(flightPanel);
+
+        // Meal preference
+        JPanel mealPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        mealPanel.add(new JLabel("Meal Preference:"));
+        ButtonGroup mealGroup = new ButtonGroup();
+        JRadioButton veg = new JRadioButton("Vegetarian (+$10)", true);
+        JRadioButton nonVeg = new JRadioButton("Non-Vegetarian (+$15)");
+        JRadioButton vegan = new JRadioButton("Vegan (+$12)");
+        mealGroup.add(veg);
+        mealGroup.add(nonVeg);
+        mealGroup.add(vegan);
+        mealPanel.add(veg);
+        mealPanel.add(nonVeg);
+        mealPanel.add(vegan);
+        panel.add(mealPanel);
+
+        // Book button
+        JPanel buttonPanel = new JPanel(new FlowLayout());
+        JButton bookButton = new JButton("Book Flight");
+        JTextArea resultArea = new JTextArea(3, 50);
+        resultArea.setEditable(false);
+
+        bookButton.addActionListener(e -> {
+            String name = nameField.getText().trim();
+            if (name.isEmpty()) {
+                resultArea.setText("Please enter your name.");
+                return;
             }
-        }
 
-        if (selectedFlight != null && selectedFlight.bookSeat()) {
-            System.out.println("\nMeal Preferences:");
-            System.out.println("1. Vegetarian");
-            System.out.println("2. Non-Vegetarian");
-            System.out.println("3. Vegan");
-            System.out.print("Choose your meal preference: ");
-            int mealChoice = scanner.nextInt();
-            scanner.nextLine();
+            int selectedIndex = flightList.getSelectedIndex();
+            if (selectedIndex == -1) {
+                resultArea.setText("Please select a flight.");
+                return;
+            }
 
-            String mealPreference = switch (mealChoice) {
-                case 1 -> "Vegetarian";
-                case 2 -> "Non-Vegetarian";
-                case 3 -> "Vegan";
-                default -> {
-                    System.out.println("Invalid choice, defaulting to Vegetarian.");
-                    yield "Vegetarian";
-                }
-            };
+            Flight selectedFlight = flights.get(selectedIndex);
+            if (!selectedFlight.bookSeat()) {
+                resultArea.setText("Booking failed! No seats available on this flight.");
+                return;
+            }
 
-            double mealCharge = switch (mealPreference) {
-                case "Vegetarian" -> 10.0;
-                case "Non-Vegetarian" -> 15.0;
-                case "Vegan" -> 12.0;
-                default -> 0.0;
-            };
+            String mealChoice;
+            double mealCharge = 0.0;
+            if (veg.isSelected()) {
+                mealChoice = "Vegetarian";
+                mealCharge = 10.0;
+            } else if (nonVeg.isSelected()) {
+                mealChoice = "Non-Vegetarian";
+                mealCharge = 20.0;
+            } else {
+                mealChoice = "Both";
+                mealCharge = 15.0;
+            }
 
             double totalCost = selectedFlight.ticketPrice + mealCharge;
-            bookings.add(new Booking(name, flightNumber, mealPreference, totalCost));
-            System.out.println("Booking successful! Total cost: $" + totalCost);
-        } else {
-            System.out.println("Booking failed! Flight not found or no seats available.");
-        }
+
+            bookings.add(new Booking(name, selectedFlight.flightNumber, mealChoice, totalCost));
+            resultArea.setText("Booking successful!\n" +
+                    "Passenger: " + name + "\n" +
+                    "Flight: " + selectedFlight.flightNumber + "\n" +
+                    "Total Cost: $" + totalCost);
+
+            // Clear fields for next booking
+            nameField.setText("");
+            flightList.clearSelection();
+            veg.setSelected(true);
+        });
+
+        buttonPanel.add(bookButton);
+        panel.add(buttonPanel);
+        panel.add(new JScrollPane(resultArea));
+
+        return panel;
     }
 
-    static void viewBookings() {
-        if (bookings.isEmpty()) {
-            System.out.println("No bookings found.");
-        } else {
-            System.out.println("\nYour Bookings:");
-            for (Booking booking : bookings) {
-                booking.displayBooking();
-            }
+    private String[] getFlightListData() {
+        String[] flightData = new String[flights.size()];
+        for (int i = 0; i < flights.size(); i++) {
+            Flight flight = flights.get(i);
+            flightData[i] = String.format("Flight %d: %s to %s ($%.2f, Seats: %d)",
+                    flight.flightNumber, flight.source, flight.destination,
+                    flight.ticketPrice, flight.availableSeats);
         }
+        return flightData;
+    }
+
+    private JPanel createViewBookingsPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        JTextArea bookingsText = new JTextArea(15, 50);
+        bookingsText.setEditable(false);
+
+        if (bookings.isEmpty()) {
+            bookingsText.setText("No bookings found.");
+        } else {
+            StringBuilder sb = new StringBuilder("Your Bookings:\n");
+            for (Booking booking : bookings) {
+                sb.append("Passenger: ").append(booking.passengerName)
+                        .append(", Flight: ").append(booking.flightNumber)
+                        .append(", Meal: ").append(booking.mealPreference)
+                        .append(", Total: $").append(booking.totalCost)
+                        .append("\n");
+            }
+            bookingsText.setText(sb.toString());
+        }
+
+        panel.add(new JScrollPane(bookingsText), BorderLayout.CENTER);
+        return panel;
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> {
+            AirlineBookingSystem system = new AirlineBookingSystem();
+            system.setVisible(true);
+        });
     }
 }
 
@@ -126,11 +253,6 @@ class Flight {
         }
         return false;
     }
-
-    public void displayFlight() {
-        System.out.println("Flight " + flightNumber + ": " + source + " to " + destination + 
-                           ", Seats: " + availableSeats + ", Price: $" + ticketPrice);
-    }
 }
 
 class Booking {
@@ -144,11 +266,6 @@ class Booking {
         this.flightNumber = flightNumber;
         this.mealPreference = mealPreference;
         this.totalCost = totalCost;
-    }
-
-    public void displayBooking() {
-        System.out.println("Passenger: " + passengerName + ", Flight: " + flightNumber + 
-                           ", Meal: " + mealPreference + ", Total: $" + totalCost);
     }
 }
 
